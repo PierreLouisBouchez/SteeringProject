@@ -19,34 +19,34 @@ private:
 
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Vehicule)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Steering)
 	UBoxComponent* Boxcomponent;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	float max_force;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	float max_speed;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	float mass;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	TEnumAsByte<EActions> action ;
 
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	ACharacter * targetcharacter;
 
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	AActor * targetactor;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Vehicule)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	TArray<AActor*> targetList;
 
 	int circuitindex = 0;
-
+	int sens = 1;
 
 	AVehicule();
 
@@ -71,6 +71,8 @@ public:
 	void circuit();
 
 	void oneway();
+
+	void twoways();
 
 
 	FVector pursue(const ACharacter& target);

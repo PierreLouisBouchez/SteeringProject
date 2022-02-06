@@ -66,7 +66,7 @@ FVector AVehicule::actionchoose()
 		break;
 
 	case Arrival:
-		return flee(targetcharacter->GetActorLocation());
+		return arrival(targetcharacter->GetActorLocation());
 		break;
 	case Evade:
 		return evade(*targetcharacter);
@@ -79,6 +79,10 @@ FVector AVehicule::actionchoose()
 		oneway();
 		return arrival(targetactor->GetActorLocation());	
 		break;
+	case TwoWays:
+		twoways();
+		return arrival(targetactor->GetActorLocation());
+		break;
 	default:
 		break;
 	}
@@ -89,10 +93,9 @@ void AVehicule::circuit()
 {
 	FVector target_offset = targetactor->GetActorLocation() - GetActorLocation();
 	float distance = target_offset.Size();
-	GEngine->AddOnScreenDebugMessage(1, 1.f, FColor::White, FString::Printf(TEXT("%f"),distance));
 
 	if (distance < 200.f) {
-		if (circuitindex == targetList.Num()-1) {
+		if (circuitindex == targetList.Num()) {
 			circuitindex = 0;
 		}
 		targetactor = targetList[circuitindex];		
@@ -107,7 +110,7 @@ void AVehicule::oneway()
 	float distance = target_offset.Size();
 
 	if (distance < 200.f) {
-		if (circuitindex == targetList.Num() - 1) {
+		if (circuitindex == targetList.Num()) {
 			return;
 		}
 		targetactor = targetList[circuitindex];
@@ -115,7 +118,22 @@ void AVehicule::oneway()
 	}
 }
 
+void AVehicule::twoways()
+{
+	FVector target_offset = targetactor->GetActorLocation() - GetActorLocation();
+	float distance = target_offset.Size();
 
+	if (distance < 200.f) {
+		if (circuitindex == targetList.Num()-1) {
+			sens = -1;
+		}
+		if (circuitindex == 0) {
+			sens = 1;
+		}
+		targetactor = targetList[circuitindex];
+		circuitindex+=sens;
+	}
+}
 
 FVector AVehicule::truncate(const FVector& vec, const float& m)
 {
@@ -158,7 +176,7 @@ FVector AVehicule::arrival(const FVector& target)
 	FVector target_offset = target - GetActorLocation();
 	float distance = target_offset.Size();
 	float ramped_speed = max_speed * (distance / 500.f);
-	if (ramped_speed < 1) {
+	if (ramped_speed < 1.5) {
 		ramped_speed = 0;
 	}
 
@@ -171,19 +189,14 @@ FVector AVehicule::arrival(const FVector& target)
 
 FVector AVehicule::pursue(const ACharacter& target)
 {
-
-
 	float angle = FVector::DotProduct(target.GetVelocity().GetSafeNormal(), (GetActorLocation()-target.GetActorLocation()).GetSafeNormal());
-	float c = 1-angle;
-	GEngine->AddOnScreenDebugMessage(1, 1.f, FColor::White, FString::Printf(TEXT("%f"), c));
-
-	return seek(target.GetActorLocation() + target.GetVelocity() * 1.f);
+	float c = 1-angle;	
+	return seek(target.GetActorLocation() + target.GetVelocity() * (angle<1?c:1.f));
 }
 
 FVector AVehicule::evade(const ACharacter& target)
 {
 	FVector targetPredictedPosition = target.GetActorLocation() + target.GetVelocity() * 1.f;
-
 	FVector desiredVelocity = (GetActorLocation() - targetPredictedPosition);
 	desiredVelocity.Normalize();
 	desiredVelocity*= max_speed;

@@ -5,12 +5,17 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Vehicule.h"
+#include "PlayableVehicule.h"
+
 #include "SteerProjectCharacter.generated.h"
 
 UCLASS(Blueprintable)
-class ASteerProjectCharacter : public ACharacter 
+class ASteerProjectCharacter :  public ACharacter
 {
 	GENERATED_BODY()
+
+
+	FVector Velocity;
 
 public:
 	ASteerProjectCharacter();
@@ -25,6 +30,10 @@ public:
 	/** Returns CursorToWorld subobject **/
 	FORCEINLINE class UDecalComponent* GetCursorToWorld() { return CursorToWorld; }
 
+	FVector targetVector;
+
+	FVector seek(const FVector& target);
+
 private:
 	/** Top down camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -37,5 +46,9 @@ private:
 	/** A decal that projects to the cursor location. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UDecalComponent* CursorToWorld;
+
+	virtual FVector GetVelocity() const override;;
+	FVector truncate(const FVector& vec, const float& m);
+
 };
 

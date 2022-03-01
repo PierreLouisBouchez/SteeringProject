@@ -42,6 +42,8 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	AActor * targetactor;
 
+
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Steering)
 	TArray<AActor*> targetList;
 

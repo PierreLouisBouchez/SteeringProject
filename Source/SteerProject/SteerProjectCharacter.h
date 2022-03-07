@@ -6,16 +6,16 @@
 #include "GameFramework/Character.h"
 #include "Vehicule.h"
 #include "PlayableVehicule.h"
+#include <SteerProject/Node.h>
+#include <SteerProject/SceneBuilder.h>
 
 #include "SteerProjectCharacter.generated.h"
 
 UCLASS(Blueprintable)
 class ASteerProjectCharacter :  public ACharacter
 {
+	
 	GENERATED_BODY()
-
-
-	FVector Velocity;
 
 public:
 	ASteerProjectCharacter();
@@ -32,7 +32,18 @@ public:
 
 	FVector targetVector;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Veloce)
+	FVector CurrentVelocity;
+	
 	FVector seek(const FVector& target);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Path)
+	ASceneBuilder* Scenebuilder;
+
+	TArray<TArray<Node>> Map;
+	
+	TArray<FVector> targetList;
+	int circuitindex = 0;
 
 private:
 	/** Top down camera */
@@ -47,8 +58,17 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UDecalComponent* CursorToWorld;
 
-	virtual FVector GetVelocity() const override;;
 	FVector truncate(const FVector& vec, const float& m);
+
+
+
+	virtual void BeginPlay() override;
+
+	void PathFinding(FVector Target);
+	int Manhattan(Node start, Node End);
+	int FloorHundred(float a);
+
+	TArray<FVector> oneway();
 
 };
 

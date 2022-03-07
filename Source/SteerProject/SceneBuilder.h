@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include <SteerProject/Node.h>
+
 #include "SceneBuilder.generated.h"
 
 UCLASS()
@@ -21,6 +23,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = PathFinding)
 	TSubclassOf<class AWall> WallClass;
 
+	TArray<TArray<Node>> Map;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -28,5 +32,5 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
+	TArray<TArray<Node>> GetMap() ;
 };

@@ -30,7 +30,7 @@ ASteerProjectCharacter::ASteerProjectCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 640.f, 0.f);
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
-	GetCharacterMovement()->MaxWalkSpeed = 600;
+	GetCharacterMovement()->MaxWalkSpeed = 13;
 
 
 	// Create a camera boom...
@@ -61,7 +61,7 @@ ASteerProjectCharacter::ASteerProjectCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	targetVector = GetActorLocation();
-	GetCharacterMovement()->Velocity = FVector(0.f, 0.f, 0.f);
+
 }
 
 void ASteerProjectCharacter::Tick(float DeltaSeconds)
@@ -81,12 +81,26 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 
 			if (PC->bMoveToMouseCursor)
 			{
+				PC->bMoveToMouseCursor = false;
 				targetVector = GetCursorToWorld()->GetComponentLocation();
+
+				PathFinding(targetVector);
+				targetList=oneway();
+				targetVector = targetList[0];
+				circuitindex = 0;
 			}
 		}
 	}
+
+	
+
+	
+	if (targetList.Num() == 0) {
+		return;
+	}
 	FVector steering_force = seek(targetVector);
-	steering_force /= 80;
+	steering_force = truncate(steering_force, 500);
+	steering_force /= 10;
 	FVector acceleration = steering_force;
 	FVector newvelocity = truncate(GetCharacterMovement()->Velocity + acceleration, GetCharacterMovement()->MaxWalkSpeed);
 	GetCharacterMovement()->Velocity = newvelocity;
@@ -94,31 +108,40 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 	new_forward.Normalize();
 	SetActorLocation(GetActorLocation() + GetCharacterMovement()->Velocity);
 	SetActorRotation(FRotator(0, GetCharacterMovement()->Velocity.Rotation().Yaw, GetCharacterMovement()->Velocity.Rotation().Roll));
-
+	CurrentVelocity = GetCharacterMovement()->Velocity;
+	
+	
+	FVector target_offset = targetVector - GetActorLocation();
+	float distance = target_offset.Size();
+	if (distance < 150.f) {
+		if (circuitindex == targetList.Num()) {
+			return;
+		}
+		targetVector = targetList[circuitindex];
+		circuitindex++;
+	}
 }
+
+
 
 
 FVector ASteerProjectCharacter::seek(const FVector& target)
 {
 	FVector target_offset = target - GetActorLocation();
 	float distance = target_offset.Size();
-	float ramped_speed = (GetCharacterMovement()->MaxWalkSpeed ) * (distance / 500.f);
-	if (ramped_speed < 1.5) {
+	float ramped_speed = (GetCharacterMovement()->MaxWalkSpeed ) * (distance / 100.f);
+	if (ramped_speed < 1) {
 		ramped_speed = 0;
 	}
 
 	float clipped_speed = FMath::Min(ramped_speed, GetCharacterMovement()->MaxWalkSpeed );
 	FVector desired_velocity = target_offset * (clipped_speed / distance);
+	desired_velocity.Z = 0;
 	FVector steering = desired_velocity - GetCharacterMovement()->Velocity;
 
 	return steering;
 }
 
-
-FVector ASteerProjectCharacter::GetVelocity() const
-{
-	return Velocity;
-}
 
 
 FVector ASteerProjectCharacter::truncate(const FVector& vec, const float& m)
@@ -130,4 +153,99 @@ FVector ASteerProjectCharacter::truncate(const FVector& vec, const float& m)
 		return res;
 	}
 	return vec;
+}
+
+void ASteerProjectCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	Map= Scenebuilder->GetMap();
+	targetVector = GetActorLocation();
+	GetCharacterMovement()->Velocity = FVector(0.f, 0.f, 0.f);
+}
+
+void ASteerProjectCharacter::PathFinding(FVector Target)
+{		
+	int xtarget = FloorHundred(Target.X);
+	int ytarget = FloorHundred(Target.Y);
+
+	if (xtarget < 0 || xtarget >31 || ytarget < 0 || ytarget >31) {
+		return ;
+	}
+	Node& target = Map[xtarget][ytarget];
+	Node& start = Map[FloorHundred(GetActorLocation().X)][ FloorHundred(GetActorLocation().Y)];
+	int neightbour[4][2] = {{0,1},{1,0},{0,-1},{-1,0}};
+
+	Node& currentNode = start;
+	TArray<Node> Open;
+	Open.Add(start);
+	int min = 0;
+
+	while (Open.Num()>0)
+	{
+		min = 0;		
+		for (int w = 0; w < Open.Num() - 1; w++) {
+			if (Open[w].f() < Open[min].f()) {
+				min = w;
+			}
+		}
+		currentNode = Open[min];
+		currentNode.IsTraited=true;		
+		Open.RemoveAt(min);		
+
+		if (currentNode.x == target.x && currentNode.y == target.y) {
+			return;
+		}
+
+		for (size_t j = 0; j < 4; j++)
+		{			
+			int x = currentNode.x + neightbour[j][0];
+			int y = currentNode.y + neightbour[j][1];			
+			Node& currneigh = Map[x][y];
+			if (currneigh.pass && !currneigh.IsTraited && !currneigh.IsWaiting) {
+				currneigh.Parentx = currentNode.x;
+				currneigh.Parenty = currentNode.y;
+				currneigh.h = Manhattan(currneigh, target);
+				currneigh.g = currentNode.g+1;
+				currneigh.IsWaiting = true;
+				Open.Add(currneigh);
+			}
+		}	
+	}
+}
+
+
+
+int ASteerProjectCharacter::Manhattan(Node start, Node End) {
+	return abs(End.x - start.x) + abs(End.y - start.y);
+}
+
+
+
+
+int ASteerProjectCharacter::FloorHundred(float a) {
+	int res = 0;
+	if (a < 0) {
+		res = (a / 100) - 0.5;
+	}
+	else if (a > 0) {
+		res = (a / 100) + 0.5;
+	}
+	return res;
+
+}
+
+TArray<FVector> ASteerProjectCharacter::oneway()
+{
+	TArray<FVector> List;
+	Node curr= Map[FloorHundred(targetVector.X)][FloorHundred(targetVector.Y)];
+	int g = curr.g;
+	while(g>1 ) {
+		List.Insert(FVector(curr.x * 100, curr.y * 100, GetActorLocation().Z),0);
+		curr = Map[curr.Parentx][curr.Parenty];
+		g--;
+	}
+	Map = Scenebuilder->GetMap();
+
+	return List;
 }

@@ -68,7 +68,7 @@ private:
 	int Manhattan(Node start, Node End);
 	int FloorHundred(float a);
 
-	TArray<FVector> oneway();
+	void oneway();
 
 };
 

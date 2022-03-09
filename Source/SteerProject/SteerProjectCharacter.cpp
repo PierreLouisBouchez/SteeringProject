@@ -30,7 +30,7 @@ ASteerProjectCharacter::ASteerProjectCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 640.f, 0.f);
 	GetCharacterMovement()->bConstrainToPlane = true;
 	GetCharacterMovement()->bSnapToPlaneAtStart = true;
-	GetCharacterMovement()->MaxWalkSpeed = 13;
+	GetCharacterMovement()->MaxWalkSpeed = 8;
 
 
 	// Create a camera boom...
@@ -82,12 +82,10 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 			if (PC->bMoveToMouseCursor)
 			{
 				PC->bMoveToMouseCursor = false;
-				targetVector = GetCursorToWorld()->GetComponentLocation();
+				auto target = GetCursorToWorld()->GetComponentLocation();
 
-				PathFinding(targetVector);
-				targetList=oneway();
-				targetVector = targetList[0];
-				circuitindex = 0;
+				PathFinding(target);
+				oneway();
 			}
 		}
 	}
@@ -100,7 +98,7 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 	}
 	FVector steering_force = seek(targetVector);
 	steering_force = truncate(steering_force, 500);
-	steering_force /= 10;
+	steering_force /= 50;
 	FVector acceleration = steering_force;
 	FVector newvelocity = truncate(GetCharacterMovement()->Velocity + acceleration, GetCharacterMovement()->MaxWalkSpeed);
 	GetCharacterMovement()->Velocity = newvelocity;
@@ -112,6 +110,7 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 	
 	
 	FVector target_offset = targetVector - GetActorLocation();
+
 	float distance = target_offset.Size();
 	if (distance < 150.f) {
 		if (circuitindex == targetList.Num()) {
@@ -235,17 +234,21 @@ int ASteerProjectCharacter::FloorHundred(float a) {
 
 }
 
-TArray<FVector> ASteerProjectCharacter::oneway()
+void ASteerProjectCharacter::oneway()
 {
-	TArray<FVector> List;
 	Node curr= Map[FloorHundred(targetVector.X)][FloorHundred(targetVector.Y)];
+
+	TArray<FVector> tmplist;
 	int g = curr.g;
 	while(g>1 ) {
-		List.Insert(FVector(curr.x * 100, curr.y * 100, GetActorLocation().Z),0);
+		tmplist.Insert(FVector(curr.x * 100, curr.y * 100, GetActorLocation().Z),0);
 		curr = Map[curr.Parentx][curr.Parenty];
 		g--;
 	}
+	for (auto item : tmplist) {
+		targetList.Add(item);
+	}
+
 	Map = Scenebuilder->GetMap();
 
-	return List;
 }

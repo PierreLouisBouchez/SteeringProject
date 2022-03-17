@@ -30,7 +30,11 @@ public:
 	/** Returns CursorToWorld subobject **/
 	FORCEINLINE class UDecalComponent* GetCursorToWorld() { return CursorToWorld; }
 
-	FVector targetVector;
+	FVector CurrentPoint;
+
+	FVector StartPoint;
+	FVector EndPoint;
+
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Veloce)
 	FVector CurrentVelocity;
@@ -64,11 +68,15 @@ private:
 
 	virtual void BeginPlay() override;
 
-	void PathFinding(FVector Target);
+	bool PathFinding(FVector actor, FVector Target);
+
 	int Manhattan(Node start, Node End);
 	int FloorHundred(float a);
 
-	void oneway();
+	void oneway(); 
+	int neightbour[4][2] = { {0,1},{1,0},{0,-1},{-1,0} };
+
+	void clear();
 
 };
 

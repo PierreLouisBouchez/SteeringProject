@@ -60,7 +60,6 @@ ASteerProjectCharacter::ASteerProjectCharacter()
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	targetVector = GetActorLocation();
 
 }
 
@@ -82,10 +81,27 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 			if (PC->bMoveToMouseCursor)
 			{
 				PC->bMoveToMouseCursor = false;
-				auto target = GetCursorToWorld()->GetComponentLocation();
+				auto end = GetCursorToWorld()->GetComponentLocation();
+				end.X = FloorHundred(end.X);
+				end.Y = FloorHundred(end.Y);
+				if (end.X < 0 || end.X >31 || end.Y < 0 || end.Y >31 || Map[end.X][end.Y].pass==false ) {
+					GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::White, TEXT("Chemin impossible"));
+				}
+				else {
 
-				PathFinding(target);
-				oneway();
+					StartPoint = EndPoint;
+					EndPoint = end;
+							
+
+					if (PathFinding(StartPoint, EndPoint)) {
+						oneway();
+						CurrentPoint = targetList[circuitindex];
+					}
+					else
+					{
+						Map = Scenebuilder->GetMap();
+					}
+				}	
 			}
 		}
 	}
@@ -95,10 +111,13 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 	
 	if (targetList.Num() == 0) {
 		return;
+
 	}
-	FVector steering_force = seek(targetVector);
-	steering_force = truncate(steering_force, 500);
-	steering_force /= 50;
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, FString::Printf(TEXT("%d"), targetList.Num()));
+
+	FVector steering_force = seek(CurrentPoint);
+	steering_force = truncate(steering_force, 1000);
+	steering_force /= 20;
 	FVector acceleration = steering_force;
 	FVector newvelocity = truncate(GetCharacterMovement()->Velocity + acceleration, GetCharacterMovement()->MaxWalkSpeed);
 	GetCharacterMovement()->Velocity = newvelocity;
@@ -109,14 +128,14 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 	CurrentVelocity = GetCharacterMovement()->Velocity;
 	
 	
-	FVector target_offset = targetVector - GetActorLocation();
+	FVector target_offset = CurrentPoint - GetActorLocation();
 
 	float distance = target_offset.Size();
 	if (distance < 150.f) {
 		if (circuitindex == targetList.Num()) {
 			return;
 		}
-		targetVector = targetList[circuitindex];
+		CurrentPoint = targetList[circuitindex];
 		circuitindex++;
 	}
 }
@@ -129,8 +148,9 @@ FVector ASteerProjectCharacter::seek(const FVector& target)
 	FVector target_offset = target - GetActorLocation();
 	float distance = target_offset.Size();
 	float ramped_speed = (GetCharacterMovement()->MaxWalkSpeed ) * (distance / 100.f);
-	if (ramped_speed < 1) {
+	if (ramped_speed < 0.7) {
 		ramped_speed = 0;
+		clear();
 	}
 
 	float clipped_speed = FMath::Min(ramped_speed, GetCharacterMovement()->MaxWalkSpeed );
@@ -159,21 +179,15 @@ void ASteerProjectCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	Map= Scenebuilder->GetMap();
-	targetVector = GetActorLocation();
-	GetCharacterMovement()->Velocity = FVector(0.f, 0.f, 0.f);
+	clear();
 }
 
-void ASteerProjectCharacter::PathFinding(FVector Target)
+bool ASteerProjectCharacter::PathFinding(FVector actor,FVector Target)
 {		
-	int xtarget = FloorHundred(Target.X);
-	int ytarget = FloorHundred(Target.Y);
+	
+	Node& target = Map[Target.X][Target.Y];
 
-	if (xtarget < 0 || xtarget >31 || ytarget < 0 || ytarget >31) {
-		return ;
-	}
-	Node& target = Map[xtarget][ytarget];
-	Node& start = Map[FloorHundred(GetActorLocation().X)][ FloorHundred(GetActorLocation().Y)];
-	int neightbour[4][2] = {{0,1},{1,0},{0,-1},{-1,0}};
+	Node& start = Map[actor.X][ actor.Y];
 
 	Node& currentNode = start;
 	TArray<Node> Open;
@@ -193,7 +207,7 @@ void ASteerProjectCharacter::PathFinding(FVector Target)
 		Open.RemoveAt(min);		
 
 		if (currentNode.x == target.x && currentNode.y == target.y) {
-			return;
+			return true;
 		}
 
 		for (size_t j = 0; j < 4; j++)
@@ -211,6 +225,7 @@ void ASteerProjectCharacter::PathFinding(FVector Target)
 			}
 		}	
 	}
+	return true;
 }
 
 
@@ -236,7 +251,7 @@ int ASteerProjectCharacter::FloorHundred(float a) {
 
 void ASteerProjectCharacter::oneway()
 {
-	Node curr= Map[FloorHundred(targetVector.X)][FloorHundred(targetVector.Y)];
+	Node curr= Map[EndPoint.X][EndPoint.Y];
 
 	TArray<FVector> tmplist;
 	int g = curr.g;
@@ -250,5 +265,16 @@ void ASteerProjectCharacter::oneway()
 	}
 
 	Map = Scenebuilder->GetMap();
+
+}
+
+
+void ASteerProjectCharacter::clear() {
+	StartPoint = FVector(FloorHundred(GetActorLocation().X), FloorHundred(GetActorLocation().Y), GetActorLocation().Z);
+	EndPoint = StartPoint;
+	CurrentPoint = StartPoint;
+	circuitindex = 0;
+	targetList.Empty();
+	GetCharacterMovement()->Velocity = FVector(0.f, 0.f, 0.f);
 
 }

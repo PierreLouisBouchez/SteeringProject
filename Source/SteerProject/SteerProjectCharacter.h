@@ -33,7 +33,13 @@ public:
 	FVector CurrentPoint;
 
 	FVector StartPoint;
+
+	FVector SuperStartPoint;
+
 	FVector EndPoint;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Veloce)
+	bool circuitOn = false;
 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Veloce)

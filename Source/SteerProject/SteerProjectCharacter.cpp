@@ -67,7 +67,7 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-	if (CursorToWorld != nullptr)
+	if (CursorToWorld != nullptr && !circuitOn)
 	{
 		if (ASteerProjectPlayerController* PC = Cast<ASteerProjectPlayerController>(GetController()))
 		{
@@ -110,11 +110,11 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 
 	
 	if (targetList.Num() == 0) {
+		circuitOn = false;
+		EnableInput(Cast<APlayerController>(GetController()));
 		return;
 
 	}
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, FString::Printf(TEXT("%d"), targetList.Num()));
-
 	FVector steering_force = seek(CurrentPoint);
 	steering_force = truncate(steering_force, 1000);
 	steering_force /= 20;
@@ -133,6 +133,14 @@ void ASteerProjectCharacter::Tick(float DeltaSeconds)
 	float distance = target_offset.Size();
 	if (distance < 150.f) {
 		if (circuitindex == targetList.Num()) {
+
+			if (circuitOn) {
+				PathFinding(FVector(FloorHundred(CurrentPoint.X), FloorHundred(CurrentPoint.Y), CurrentPoint.Z), SuperStartPoint);
+				oneway();
+				CurrentPoint = targetList[circuitindex];
+				circuitOn = false;
+				EnableInput(Cast<APlayerController>(GetController()));
+			}
 			return;
 		}
 		CurrentPoint = targetList[circuitindex];
@@ -274,6 +282,7 @@ void ASteerProjectCharacter::clear() {
 	EndPoint = StartPoint;
 	CurrentPoint = StartPoint;
 	circuitindex = 0;
+	SuperStartPoint = StartPoint;
 	targetList.Empty();
 	GetCharacterMovement()->Velocity = FVector(0.f, 0.f, 0.f);
 
